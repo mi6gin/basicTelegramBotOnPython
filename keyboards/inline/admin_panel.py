@@ -1,20 +1,22 @@
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.types import InlineKeyboardMarkup
+from aiogram_i18n import I18nContext
 
 
-def get_admin_panel_keyboard() -> InlineKeyboardMarkup:
+def get_admin_panel_keyboard(i18n: I18nContext) -> InlineKeyboardMarkup:
     """
     Возвращает клавиатуру панели администратора.
     Включает разделы статистики, рассылки, управления пользователями и возврата в меню.
     """
     builder = InlineKeyboardBuilder()
     
-    builder.button(text="📊 Статистика", callback_data="admin_stats")
-    builder.button(text="📣 Создать рассылку", callback_data="admin_mailing")
-    builder.button(text="👥 Управление", callback_data="admin_users_manage")
-    builder.button(text="🔙 Главное меню", callback_data="back_to_menu")
+    builder.button(text=i18n.get("btn-admin-stats"), callback_data="admin_stats")
+    builder.button(text=i18n.get("btn-admin-mailing"), callback_data="admin_mailing")
+    builder.button(text=i18n.get("btn-admin-users"), callback_data="admin_users_manage")
+    builder.button(text=i18n.get("btn-admin-logs"), callback_data="admin_get_logs")
+    builder.button(text=i18n.get("btn-back-to-menu"), callback_data="back_to_menu")
     
-    # 2 кнопки в первом ряду, затем по 1 кнопке
-    builder.adjust(2, 1, 1)
+    # По 2 кнопки в первых двух рядах, затем кнопка возврата в меню
+    builder.adjust(2, 2, 1)
     
     return builder.as_markup()

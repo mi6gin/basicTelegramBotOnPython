@@ -1,7 +1,19 @@
+import os
+from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy.orm import DeclarativeBase
 from config.settings import settings
 from utils.logger import logger
+
+# Автоматически создаем директорию для базы данных, если используется SQLite
+try:
+    db_url_parsed = make_url(settings.db_url)
+    if db_url_parsed.drivername.startswith("sqlite") and db_url_parsed.database:
+        db_dir = os.path.dirname(db_url_parsed.database)
+        if db_dir:
+            os.makedirs(db_dir, exist_ok=True)
+except Exception as e:
+    logger.error(f"Не удалось подготовить директорию для БД: {e}")
 
 # Создаем асинхронный движок для подключения к БД
 engine = create_async_engine(

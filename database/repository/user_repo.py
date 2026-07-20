@@ -27,7 +27,8 @@ class UserRepository:
         username: Optional[str] = None,
         first_name: str = "",
         last_name: Optional[str] = None,
-        role: str = "user"
+        role: Optional[str] = None,
+        language: Optional[str] = None
     ) -> User:
         """
         Возвращает пользователя, если он существует, иначе создает нового.
@@ -39,7 +40,8 @@ class UserRepository:
                 username=username,
                 first_name=first_name,
                 last_name=last_name,
-                role=role
+                role=role or "user",
+                language=language or "ru"
             )
             session.add(user)
             await session.commit()
@@ -56,6 +58,9 @@ class UserRepository:
             if user.last_name != last_name:
                 user.last_name = last_name
                 updated = True
+            if role is not None and user.role != role:
+                user.role = role
+                updated = True
             
             if updated:
                 await session.commit()
@@ -64,19 +69,16 @@ class UserRepository:
         return user
 
     @staticmethod
-    async def update_bio(session: AsyncSession, telegram_id: int, bio: str) -> Optional[User]:
+    async def update_language(session: AsyncSession, telegram_id: int, language: str) -> Optional[User]:
         """
-        Обновляет описание/биографию профиля пользователя.
+        Обновляет выбранный язык пользователя.
         """
-        query = (
-            update(User)
-            .where(User.telegram_id == telegram_id)
-            .values(bio=bio)
-            .returning(User)
-        )
-        result = await session.execute(query)
-        await session.commit()
-        return result.scalar_one_or_none()
+        user = await UserRepository.get_by_id(session, telegram_id)
+        if user:
+            user.language = language
+            await session.commit()
+            return user
+        return None
 
     @staticmethod
     async def set_ban_status(session: AsyncSession, telegram_id: int, is_banned: bool) -> bool:

@@ -22,5 +22,10 @@ class DbSessionMiddleware(BaseMiddleware):
         # Открываем асинхронную сессию из пула
         async with self.session_pool() as session:
             data["session"] = session
-            # Выполняем хендлер и возвращаем результат
-            return await handler(event, data)
+            try:
+                result = await handler(event, data)
+                await session.commit()
+                return result
+            except Exception as e:
+                await session.rollback()
+                raise e

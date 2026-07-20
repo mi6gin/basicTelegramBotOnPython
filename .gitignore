@@ -649,3 +649,4 @@ fabric.properties
 /logs/
 logs/
 .idea/
+data/

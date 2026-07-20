@@ -36,29 +36,6 @@ async def test_user_repository_get_or_create(db_session: AsyncSession):
     )
     assert existing_user.telegram_id == telegram_id
     assert existing_user.first_name == "Ivan_Updated"  # Имя обновилось в БД
-
-
-@pytest.mark.asyncio
-async def test_user_repository_update_bio(db_session: AsyncSession):
-    """Тест обновления БИО пользователя."""
-    telegram_id = 88888
-    await UserRepository.get_or_create(
-        session=db_session,
-        telegram_id=telegram_id,
-        first_name="Alice"
-    )
-
-    bio_text = "Люблю программировать на Python!"
-    updated_user = await UserRepository.update_bio(db_session, telegram_id, bio_text)
-    
-    assert updated_user is not None
-    assert updated_user.bio == bio_text
-
-    # Проверяем в БД напрямую
-    db_user = await UserRepository.get_by_id(db_session, telegram_id)
-    assert db_user.bio == bio_text
-
-
 @pytest.mark.asyncio
 async def test_user_repository_ban_status_and_stats(db_session: AsyncSession):
     """Тест переключения бана и корректности статистики по пользователям."""

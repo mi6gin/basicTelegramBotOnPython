@@ -14,8 +14,8 @@ class Settings(BaseSettings):
     # Список Telegram ID администраторов бота
     admin_ids: List[int] = []
 
-    # URL подключения к базе данных (по умолчанию SQLite)
-    db_url: str = "sqlite+aiosqlite:///nihao_chan.db"
+    # URL подключения к базе данных (по умолчанию SQLite в директории data)
+    db_url: str = "sqlite+aiosqlite:///data/nihao_chan.db"
     
     # Настройки антифлуда (троттлинга) в секундах
     throttling_delay: float = 0.8
@@ -34,6 +34,8 @@ class Settings(BaseSettings):
         Валидатор для разбора списка ID администраторов.
         Позволяет передавать их через запятую в .env: ADMIN_IDS=12345,67890
         """
+        if isinstance(v, (int, float)):
+            return [int(v)]
         if isinstance(v, str):
             if not v.strip():
                 return []

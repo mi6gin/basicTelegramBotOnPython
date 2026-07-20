@@ -9,6 +9,7 @@ from keyboards.reply.cancel import get_cancel_keyboard
 from filters.is_private import IsPrivate
 from filters.is_admin import IsAdmin
 from sqlalchemy.ext.asyncio import AsyncSession
+from aiogram_i18n import I18nContext
 from utils.logger import logger
 
 router = Router(name="admin_mailing")
@@ -23,15 +24,14 @@ class AdminMailingStates(StatesGroup):
 
 
 @router.callback_query(F.data == "admin_mailing", IsPrivate(), IsAdmin())
-async def start_mailing(callback: CallbackQuery, state: FSMContext):
+async def start_mailing(callback: CallbackQuery, state: FSMContext, i18n: I18nContext):
     """
     Запускает процесс создания рассылки (FSM).
     """
     await callback.answer()
     await callback.message.answer(
-        "📣 **Создание массовой рассылки**\n\n"
-        "Отправьте сообщение (текст, фото, видео или стикер), которое вы хотите разослать всем пользователям бота:",
-        reply_markup=get_cancel_keyboard()
+        i18n.get("admin-mailing-prompt"),
+        reply_markup=get_cancel_keyboard(i18n)
     )
     await state.set_state(AdminMailingStates.waiting_for_content)
 
@@ -41,28 +41,30 @@ async def process_mailing_content(
     message: Message, 
     state: FSMContext, 
     session: AsyncSession, 
-    bot: Bot
+    bot: Bot,
+    i18n: I18nContext
 ):
     """
     Получает контент рассылки, совершает рассылку по списку пользователей из БД.
     Копирует форматирование и вложения с помощью метода copy_to.
     """
-    if message.text == "❌ Отмена":
+    cancel_text = i18n.get("btn-cancel")
+    if message.text == cancel_text or message.text == "❌ Отмена":
         await state.clear()
         await message.answer(
-            "Рассылка отменена.",
-            reply_markup=get_admin_panel_keyboard()
+            i18n.get("admin-mailing-cancel"),
+            reply_markup=get_admin_panel_keyboard(i18n)
         )
         return
 
     # Загружаем список всех пользователей из базы данных
     users = await UserRepository.get_all(session)
     if not users:
-        await message.answer("В базе данных нет зарегистрированных пользователей.")
+        await message.answer(i18n.get("err-no-users"))
         await state.clear()
         return
 
-    status_msg = await message.answer("⏳ Рассылка запущена, пожалуйста, подождите...")
+    status_msg = await message.answer(i18n.get("admin-mailing-sending"))
     await state.clear()
 
     success_count = 0
@@ -87,8 +89,10 @@ async def process_mailing_content(
     await status_msg.delete()
     
     await message.answer(
-        f"📊 **Рассылка завершена!**\n\n"
-        f"┣ Успешно отправлено: `{success_count}`\n"
-        f"┗ Ошибки отправки (блокировка бота): `{fail_count}`",
-        reply_markup=get_admin_panel_keyboard()
+        i18n.get(
+            "admin-mailing-success",
+            success=str(success_count),
+            failed=str(fail_count)
+        ),
+        reply_markup=get_admin_panel_keyboard(i18n)
     )

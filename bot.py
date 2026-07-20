@@ -11,20 +11,37 @@ from middlewares.db_session_mw import DbSessionMiddleware
 from middlewares.ban_mw import BanMiddleware
 from middlewares.throttling_mw import ThrottlingMiddleware
 from middlewares.logging_mw import LoggingMiddleware
+from middlewares.i18n_mw import i18n_middleware
 from routers import get_main_router
 from utils.logger import logger
 
 
 async def set_bot_commands(bot: Bot):
     """
-    Устанавливает базовое меню команд в интерфейсе Telegram.
+    Устанавливает локализованные меню команд в интерфейсе Telegram.
     """
-    commands = [
+    commands_en = [
+        BotCommand(command="start", description="Launch the bot / Menu 🌸"),
+        BotCommand(command="help", description="Show help info ℹ️"),
+        BotCommand(command="about", description="About Nihao-chan ✨")
+    ]
+    
+    commands_ru = [
         BotCommand(command="start", description="Запустить бота / Меню 🌸"),
         BotCommand(command="help", description="Показать справку ℹ️"),
         BotCommand(command="about", description="О Нихао-тян ✨")
     ]
-    await bot.set_my_commands(commands)
+    
+    try:
+        # Русский язык по умолчанию для всех остальных локалей
+        await bot.set_my_commands(commands_ru)
+        
+        # Индивидуальные настройки меню для RU и EN локалей
+        await bot.set_my_commands(commands_ru, language_code="ru")
+        await bot.set_my_commands(commands_en, language_code="en")
+        logger.info("Локализованные команды меню успешно зарегистрированы.")
+    except Exception as e:
+        logger.error(f"Ошибка при установке меню команд: {e}")
 
 
 async def main():
@@ -52,6 +69,7 @@ async def main():
     # 4) Логирование — записывает поступающие события в логи.
     dp.update.outer_middleware(DbSessionMiddleware(AsyncSessionLocal))
     dp.update.outer_middleware(BanMiddleware())
+    i18n_middleware.setup(dp)
     dp.message.outer_middleware(ThrottlingMiddleware())
     dp.update.outer_middleware(LoggingMiddleware())
 

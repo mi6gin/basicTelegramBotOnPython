@@ -2,6 +2,7 @@ from typing import Callable, Awaitable, Dict, Any
 from aiogram import BaseMiddleware
 from aiogram.types import Message, CallbackQuery, TelegramObject
 from database.repository.user_repo import UserRepository
+from config.settings import settings
 
 
 class BanMiddleware(BaseMiddleware):
@@ -21,27 +22,39 @@ class BanMiddleware(BaseMiddleware):
         tg_user = data.get("event_from_user")
 
         if session and tg_user:
+            # Определяем роль пользователя на основе конфигурации ADMIN_IDS
+            role = "admin" if tg_user.id in settings.admin_ids else None
+
             # Получаем или создаем пользователя в БД
             db_user = await UserRepository.get_or_create(
                 session=session,
                 telegram_id=tg_user.id,
                 username=tg_user.username,
                 first_name=tg_user.first_name,
-                last_name=tg_user.last_name
+                last_name=tg_user.last_name,
+                role=role
             )
 
             # Если пользователь заблокирован — прерываем обработку
             if db_user.is_banned:
+                from middlewares.i18n_mw import i18n_middleware
+                # Определяем локаль
+                locale = db_user.language or (tg_user.language_code.split("-")[0] if tg_user.language_code else "ru")
+                if locale not in ("ru", "en"):
+                    locale = "ru"
+
                 if isinstance(event, Message):
-                    await event.answer(
-                        "К сожалению, вы заблокированы в системе Нихао-тян. ❌\n"
-                        "Свяжитесь с администрацией, если это ошибка."
-                    )
+                    try:
+                        msg = i18n_middleware.core.get("err-banned-message", locale)
+                    except Exception:
+                        msg = "Unfortunately, you are banned in the Nihao-chan system. ❌" if locale == "en" else "К сожалению, вы заблокированы в системе Нихао-тян. ❌"
+                    await event.answer(msg)
                 elif isinstance(event, CallbackQuery):
-                    await event.answer(
-                        "Вы заблокированы! Доступ ограничен.",
-                        show_alert=True
-                    )
+                    try:
+                        msg = i18n_middleware.core.get("err-banned-callback", locale)
+                    except Exception:
+                        msg = "You are banned! Access denied." if locale == "en" else "Вы заблокированы! Доступ ограничен."
+                    await event.answer(msg, show_alert=True)
                 return  # Прерываем выполнение цепочки обработчиков
 
             # Передаем объект пользователя дальше в хендлеры и другие middleware

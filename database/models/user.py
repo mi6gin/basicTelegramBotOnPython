@@ -23,11 +23,11 @@ class User(Base):
     # Фамилия пользователя
     last_name: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     
-    # Краткая биография/описание профиля (заполняется в FSM)
-    bio: Mapped[Optional[str]] = mapped_column(String(150), nullable=True)
-    
     # Роль пользователя: 'user' или 'admin'
     role: Mapped[str] = mapped_column(String(20), default="user")
+
+    # Язык интерфейса пользователя ('ru' или 'en')
+    language: Mapped[str] = mapped_column(String(10), default="ru")
     
     # Флаг блокировки пользователя
     is_banned: Mapped[bool] = mapped_column(Boolean, default=False)
