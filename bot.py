@@ -71,7 +71,8 @@ async def main():
     dp.update.outer_middleware(BanMiddleware())
     i18n_middleware.setup(dp)
     dp.message.outer_middleware(ThrottlingMiddleware())
-    dp.update.outer_middleware(LoggingMiddleware())
+    dp.message.outer_middleware(LoggingMiddleware())
+    dp.callback_query.outer_middleware(LoggingMiddleware())
 
     # 4. Подключение общего роутера хендлеров
     dp.include_router(get_main_router())

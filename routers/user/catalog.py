@@ -1,6 +1,7 @@
 from aiogram import Router, F
 from aiogram.types import CallbackQuery
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+from aiogram.fsm.context import FSMContext
 from aiogram_i18n import I18nContext
 from filters.is_private import IsPrivate
 
@@ -27,10 +28,12 @@ CATALOG_ITEMS = {
 
 
 @router.callback_query(F.data == "user_catalog", IsPrivate())
-async def show_catalog(callback: CallbackQuery, i18n: I18nContext):
+async def show_catalog(callback: CallbackQuery, i18n: I18nContext, state: FSMContext):
     """
     Показывает список доступных товаров/тем в каталоге.
+    Очищает любые активные состояния FSM при переходе.
     """
+    await state.clear()
     await callback.answer()
     
     builder = InlineKeyboardBuilder()

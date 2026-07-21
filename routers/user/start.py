@@ -1,6 +1,7 @@
 from aiogram import Router, F
 from aiogram.filters import CommandStart, Command
 from aiogram.types import Message, CallbackQuery
+from aiogram.fsm.context import FSMContext
 from aiogram_i18n import I18nContext
 
 from database.models.user import User
@@ -53,10 +54,12 @@ async def cmd_about(message: Message, i18n: I18nContext):
 # --- Хендлеры возврата в меню ---
 
 @router.callback_query(F.data == "back_to_menu", IsPrivate())
-async def process_back_to_menu(callback: CallbackQuery, db_user: User, i18n: I18nContext):
+async def process_back_to_menu(callback: CallbackQuery, db_user: User, i18n: I18nContext, state: FSMContext):
     """
     Возврат в главное меню при нажатии inline-кнопки.
+    Очищает любые активные состояния FSM при переходе.
     """
+    await state.clear()
     await callback.answer()
     is_admin_user = await IsAdmin()(callback, db_user)
     await callback.message.edit_text(

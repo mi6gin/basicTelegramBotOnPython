@@ -4,7 +4,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from database.repository.user_repo import UserRepository
 from keyboards.inline.admin_panel import get_admin_panel_keyboard
-from keyboards.reply.cancel import get_cancel_keyboard
+from keyboards.inline.cancel import get_cancel_inline_keyboard
 from filters.is_private import IsPrivate
 from filters.is_admin import IsAdmin
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -28,11 +28,29 @@ async def start_manage_users(callback: CallbackQuery, state: FSMContext, i18n: I
     Запускает FSM для смены статуса бана пользователя.
     """
     await callback.answer()
-    await callback.message.answer(
+    
+    prompt_msg = await callback.message.edit_text(
         i18n.get("admin-users-prompt"),
-        reply_markup=get_cancel_keyboard(i18n)
+        reply_markup=get_cancel_inline_keyboard(i18n, callback_data="cancel_admin_users_manage")
     )
+    
     await state.set_state(AdminUserManageStates.waiting_for_target_id)
+    await state.update_data(prompt_msg_id=prompt_msg.message_id)
+
+
+@router.callback_query(F.data == "cancel_admin_users_manage", IsPrivate(), IsAdmin())
+async def process_cancel_manage_users(callback: CallbackQuery, state: FSMContext, i18n: I18nContext):
+    """
+    Отмена управления пользователями при клике на инлайн-кнопку.
+    Возвращает в админ-панель.
+    """
+    await callback.answer()
+    await state.clear()
+    
+    await callback.message.edit_text(
+        i18n.get("admin-panel-title"),
+        reply_markup=get_admin_panel_keyboard(i18n)
+    )
 
 
 @router.message(AdminUserManageStates.waiting_for_target_id, IsPrivate(), IsAdmin())
@@ -45,14 +63,14 @@ async def process_ban_unban(
     """
     Принимает ID пользователя, находит его в БД и инвертирует его флаг бана (is_banned).
     """
-    cancel_text = i18n.get("btn-cancel")
-    if message.text == cancel_text or message.text == "❌ Отмена":
-        await state.clear()
-        await message.answer(
-            i18n.get("admin-users-cancel"),
-            reply_markup=get_admin_panel_keyboard(i18n)
-        )
-        return
+    # Удаляем сообщение-подсказку с инлайн-кнопкой отмены
+    data = await state.get_data()
+    prompt_msg_id = data.get("prompt_msg_id")
+    if prompt_msg_id:
+        try:
+            await message.bot.delete_message(chat_id=message.chat.id, message_id=prompt_msg_id)
+        except Exception:
+            pass
 
     input_text = message.text.strip()
     
@@ -69,7 +87,7 @@ async def process_ban_unban(
         await state.clear()
         await message.answer(i18n.get("admin-panel-title"), reply_markup=get_admin_panel_keyboard(i18n))
         return
-
+ 
     # Получаем пользователя из БД
     target_user = await UserRepository.get_by_id(session, target_id)
     

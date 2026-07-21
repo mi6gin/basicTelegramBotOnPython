@@ -95,3 +95,60 @@ async def test_ban_middleware_blocks_banned_user(db_session: AsyncSession):
     # Сообщение о блокировке должно быть отправлено пользователю
     message.answer.assert_called_once()
     assert "заблокированы" in message.answer.call_args[0][0]
+
+
+@pytest.mark.asyncio
+async def test_logging_middleware_message(caplog):
+    """Тест LoggingMiddleware: проверяет логирование входящего текстового сообщения."""
+    from middlewares.logging_mw import LoggingMiddleware
+    import logging
+
+    middleware = LoggingMiddleware()
+    handler = AsyncMock(return_value="response")
+
+    # Создаем mock-сообщение
+    message = MagicMock(spec=Message)
+    message.text = "Hello world!"
+    message.contact = None
+    
+    tg_user = MagicMock()
+    tg_user.id = 112233
+    tg_user.username = "test_log_user"
+
+    data = {
+        "event_from_user": tg_user
+    }
+
+    with caplog.at_level(logging.INFO):
+        res = await middleware(handler, message, data)
+        assert res == "response"
+        assert any("sent text message: 'Hello world!'" in record.message for record in caplog.records)
+
+
+@pytest.mark.asyncio
+async def test_logging_middleware_callback_query(caplog):
+    """Тест LoggingMiddleware: проверяет логирование нажатия inline-кнопки."""
+    from middlewares.logging_mw import LoggingMiddleware
+    from aiogram.types import CallbackQuery
+    import logging
+
+    middleware = LoggingMiddleware()
+    handler = AsyncMock(return_value="response")
+
+    # Создаем mock CallbackQuery
+    callback = MagicMock(spec=CallbackQuery)
+    callback.data = "click_button_abc"
+    
+    tg_user = MagicMock()
+    tg_user.id = 112233
+    tg_user.username = "test_log_user"
+
+    data = {
+        "event_from_user": tg_user
+    }
+
+    with caplog.at_level(logging.INFO):
+        res = await middleware(handler, callback, data)
+        assert res == "response"
+        assert any("clicked inline button with callback_data: 'click_button_abc'" in record.message for record in caplog.records)
+

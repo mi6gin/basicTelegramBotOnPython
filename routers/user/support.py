@@ -5,7 +5,7 @@ from aiogram_i18n import I18nContext
 
 from database.models.user import User
 from database.repository.ticket_repo import TicketRepository
-from keyboards.reply.cancel import get_cancel_keyboard
+from keyboards.inline.cancel import get_cancel_inline_keyboard
 from keyboards.inline.user_menu import get_user_menu_keyboard
 from states.support import SupportStates
 from filters.is_private import IsPrivate
@@ -19,14 +19,35 @@ router = Router(name="user_support")
 @router.callback_query(F.data == "user_support", IsPrivate())
 async def start_support_ticket(callback: CallbackQuery, state: FSMContext, i18n: I18nContext):
     """
-    Запускает процесс создания тикета поддержки (FSM).
+    Запускает процесс создания тикета поддержки (FSM) с заменой текста сообщения.
     """
     await callback.answer()
-    await callback.message.answer(
+    
+    # Редактируем текущее сообщение меню, добавляя инлайн-кнопку отмены
+    prompt_msg = await callback.message.edit_text(
         i18n.get("support-prompt"),
-        reply_markup=get_cancel_keyboard(i18n)
+        reply_markup=get_cancel_inline_keyboard(i18n, callback_data="cancel_support")
     )
+    
     await state.set_state(SupportStates.waiting_for_ticket_message)
+    # Сохраняем ID сообщения-подсказки, чтобы удалить его после ввода текста
+    await state.update_data(prompt_msg_id=prompt_msg.message_id)
+
+
+@router.callback_query(F.data == "cancel_support", IsPrivate())
+async def process_cancel_support(callback: CallbackQuery, state: FSMContext, db_user: User, i18n: I18nContext):
+    """
+    Обработчик клика по инлайн-кнопке отмены при создании тикета.
+    Возвращает пользователя в главное меню.
+    """
+    await callback.answer()
+    await state.clear()
+    
+    is_admin_user = await IsAdmin()(callback, db_user)
+    await callback.message.edit_text(
+        i18n.get("menu-title"),
+        reply_markup=get_user_menu_keyboard(i18n, is_admin=is_admin_user)
+    )
 
 
 @router.message(SupportStates.waiting_for_ticket_message, IsPrivate())
@@ -40,20 +61,19 @@ async def process_ticket_message(
     """
     Обрабатывает ввод сообщения для поддержки. Создает тикет в БД.
     """
-    cancel_text = i18n.get("btn-cancel")
-    if message.text == cancel_text or message.text == "❌ Отмена":
-        await state.clear()
-        is_admin_user = await IsAdmin()(message, db_user)
-        await message.answer(
-            i18n.get("support-cancel"),
-            reply_markup=get_user_menu_keyboard(i18n, is_admin=is_admin_user)
-        )
-        return
-
     ticket_text = message.text.strip()
     if len(ticket_text) < 10 or len(ticket_text) > 1000:
         await message.answer(i18n.get("err-ticket-length"))
         return
+
+    # Удаляем сообщение-подсказку с кнопкой отмены, чтобы не засорять чат неактивными кнопками
+    data = await state.get_data()
+    prompt_msg_id = data.get("prompt_msg_id")
+    if prompt_msg_id:
+        try:
+            await message.bot.delete_message(chat_id=message.chat.id, message_id=prompt_msg_id)
+        except Exception:
+            pass
 
     # Создаем тикет в БД
     ticket = await TicketRepository.create(session, db_user.telegram_id, ticket_text)

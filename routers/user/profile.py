@@ -1,5 +1,6 @@
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
+from aiogram.fsm.context import FSMContext
 from aiogram_i18n import I18nContext
 
 from database.models.user import User
@@ -27,10 +28,12 @@ def format_profile_text(user: User, i18n: I18nContext) -> str:
 
 
 @router.callback_query(F.data == "user_profile", IsPrivate())
-async def show_profile(callback: CallbackQuery, db_user: User, i18n: I18nContext):
+async def show_profile(callback: CallbackQuery, db_user: User, i18n: I18nContext, state: FSMContext):
     """
     Показывает карточку профиля пользователя.
+    Очищает любые активные состояния FSM при переходе.
     """
+    await state.clear()
     await callback.answer()
     await callback.message.edit_text(
         text=format_profile_text(db_user, i18n),
@@ -39,10 +42,12 @@ async def show_profile(callback: CallbackQuery, db_user: User, i18n: I18nContext
 
 
 @router.callback_query(F.data == "change_language", IsPrivate())
-async def show_language_selection(callback: CallbackQuery, i18n: I18nContext):
+async def show_language_selection(callback: CallbackQuery, i18n: I18nContext, state: FSMContext):
     """
     Показывает меню выбора языка.
+    Очищает любые активные состояния FSM при переходе.
     """
+    await state.clear()
     await callback.answer()
     await callback.message.edit_text(
         text=i18n.get("lang-select-prompt"),
@@ -51,10 +56,12 @@ async def show_language_selection(callback: CallbackQuery, i18n: I18nContext):
 
 
 @router.callback_query(F.data.startswith("set_lang_"), IsPrivate())
-async def set_language(callback: CallbackQuery, db_user: User, i18n: I18nContext):
+async def set_language(callback: CallbackQuery, db_user: User, i18n: I18nContext, state: FSMContext):
     """
     Сохраняет выбранный пользователем язык и возвращает в профиль.
+    Очищает любые активные состояния FSM при переходе.
     """
+    await state.clear()
     await callback.answer()
     lang = callback.data.split("_")[-1]
     if lang in ("ru", "en"):
