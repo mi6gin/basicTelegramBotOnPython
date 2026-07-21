@@ -248,15 +248,6 @@ async def process_ticket_reply(
     # Возвращаемся к оставшимся тикетам
     tickets = await TicketRepository.get_all_open(session)
     
-    # Создаем фиктивный CallbackQuery, чтобы переиспользовать функцию просмотра
-    dummy_callback = CallbackQuery(
-        id="0",
-        from_user=message.from_user,
-        chat_instance="0",
-        message=message,  # Новое сообщение админа станет местом вывода
-        data=f"admin_tickets_view_{index}"
-    )
-    
     if not tickets:
         builder = InlineKeyboardBuilder()
         builder.button(text=i18n.get("btn-admin-panel"), callback_data="admin_panel_entry")
@@ -269,8 +260,14 @@ async def process_ticket_reply(
     if index >= len(tickets):
         index = len(tickets) - 1
 
-    # Запускаем просмотр заново (в виде нового сообщения, так как старое удалить/отредактировать нельзя)
-    dummy_callback.data = f"admin_tickets_view_{index}"
+    # Создаем фиктивный CallbackQuery, чтобы переиспользовать функцию просмотра
+    dummy_callback = CallbackQuery(
+        id="0",
+        from_user=message.from_user,
+        chat_instance="0",
+        message=message,  # Новое сообщение админа станет местом вывода
+        data=f"admin_tickets_view_{index}"
+    )
     
     # Подменяем метод edit_text на answer, чтобы dummy_callback отработал отправкой нового сообщения
     async def mock_edit_text(text, reply_markup=None):
