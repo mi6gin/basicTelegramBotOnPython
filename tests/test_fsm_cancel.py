@@ -49,8 +49,8 @@ async def test_process_cancel_mailing():
 
     await process_cancel_mailing(callback, state, i18n)
     
-    callback.answer.assert_called_once()
-    state.clear.assert_called_once()
+    assert callback.answer.call_count == 2
+    assert state.clear.call_count == 2
     callback.message.edit_text.assert_called_once()
 
 

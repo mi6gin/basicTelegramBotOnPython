@@ -122,10 +122,33 @@ admin-stats-title =
     ┣ Total users in DB: `{ $total }`
     ┣ Banned users: `{ $banned }`
     ┗ Open support tickets: `{ $tickets }`
-admin-mailing-prompt =
-    📣 **Create Mass Broadcast**
+admin-mailing-target-prompt =
+    📢 **Broadcast Audience Setup**
     
-    Send the message (text, photo, video, or sticker) you want to broadcast to all bot users:
+    Select who you want to send the message to:
+btn-mailing-target-all = 👥 All Users
+btn-mailing-target-filters = 🎨 By Filters (Lang/Style)
+btn-mailing-target-list = 🎯 Select from List
+admin-mailing-filters-prompt =
+    🎨 **Select Broadcast Filter**
+    
+    Select targeting criteria:
+btn-mailing-filter-lang-ru = 🇷🇺 Only RU-locale Users
+btn-mailing-filter-lang-en = 🇬🇧 Only EN-locale Users
+btn-mailing-filter-theme = 🎨 By Styles/Themes
+admin-mailing-themes-prompt =
+    🎨 **Select Style for targeting**
+    
+    Select the Nihao-chan style users of which should receive this broadcast:
+admin-mailing-list-prompt =
+    🎯 **Selective Broadcast from List**
+    
+    Select recipients (selected: { $count }):
+btn-mailing-list-send = ✉️ Send Message ({ $count })
+admin-mailing-prompt =
+    📣 **Send Broadcast Content**
+    
+    Send the message (text, photo, video, or sticker) you want to broadcast to the selected group ({ $target }):
 admin-mailing-cancel = Broadcast cancelled.
 admin-mailing-sending = ⏳ Broadcast started, please wait...
 admin-mailing-success =
