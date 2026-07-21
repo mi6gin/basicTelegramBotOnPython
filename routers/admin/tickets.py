@@ -16,34 +16,31 @@ from utils.logger import logger
 router = Router(name="admin_tickets")
 
 
-@router.callback_query(F.data.startswith("admin_tickets_view_"), IsPrivate(), IsAdmin())
-async def view_open_tickets(
-    callback: CallbackQuery, 
-    session: AsyncSession, 
-    i18n: I18nContext, 
-    state: FSMContext
+async def render_tickets_view(
+    message: Message,
+    tickets: list,
+    index: int,
+    i18n: I18nContext,
+    edit: bool = True
 ):
     """
-    Позволяет администратору просматривать все открытые обращения по очереди (пагинация).
+    Универсальная функция рендеринга страницы тикетов.
+    Поддерживает как редактирование существующего сообщения (edit=True),
+    так и отправку нового сообщения (edit=False).
     """
-    await state.clear()
-    await callback.answer()
-    
-    # Парсим текущий индекс из callback_data
-    try:
-        index = int(callback.data.replace("admin_tickets_view_", ""))
-    except ValueError:
-        index = 0
-
-    tickets = await TicketRepository.get_all_open(session)
-    
     if not tickets:
         builder = InlineKeyboardBuilder()
         builder.button(text=i18n.get("btn-admin-panel"), callback_data="admin_panel_entry")
-        await callback.message.edit_text(
-            i18n.get("admin-tickets-empty"),
-            reply_markup=builder.as_markup()
-        )
+        if edit:
+            await message.edit_text(
+                i18n.get("admin-tickets-empty"),
+                reply_markup=builder.as_markup()
+            )
+        else:
+            await message.answer(
+                i18n.get("admin-tickets-empty"),
+                reply_markup=builder.as_markup()
+            )
         return
 
     # Корректируем индекс
@@ -96,10 +93,39 @@ async def view_open_tickets(
     # Разметка рядов: Ответить (1), Закрыть без ответа (1), Пагинация (row_count), Назад (1)
     builder.adjust(1, 1, row_count, 1)
     
-    await callback.message.edit_text(
-        text=text,
-        reply_markup=builder.as_markup()
-    )
+    if edit:
+        await message.edit_text(
+            text=text,
+            reply_markup=builder.as_markup()
+        )
+    else:
+        await message.answer(
+            text=text,
+            reply_markup=builder.as_markup()
+        )
+
+
+@router.callback_query(F.data.startswith("admin_tickets_view_"), IsPrivate(), IsAdmin())
+async def view_open_tickets(
+    callback: CallbackQuery, 
+    session: AsyncSession, 
+    i18n: I18nContext, 
+    state: FSMContext
+):
+    """
+    Позволяет администратору просматривать все открытые обращения по очереди (пагинация).
+    """
+    await state.clear()
+    await callback.answer()
+    
+    # Парсим текущий индекс из callback_data
+    try:
+        index = int(callback.data.replace("admin_tickets_view_", ""))
+    except ValueError:
+        index = 0
+
+    tickets = await TicketRepository.get_all_open(session)
+    await render_tickets_view(callback.message, tickets, index, i18n, edit=True)
 
 
 @router.callback_query(F.data.startswith("admin_ticket_close_no_reply_"), IsPrivate(), IsAdmin())
@@ -139,20 +165,7 @@ async def close_ticket_no_reply(
 
     # Перенаправляем на просмотр оставшихся
     tickets = await TicketRepository.get_all_open(session)
-    if not tickets:
-        builder = InlineKeyboardBuilder()
-        builder.button(text=i18n.get("btn-admin-panel"), callback_data="admin_panel_entry")
-        await callback.message.edit_text(
-            i18n.get("admin-tickets-empty"),
-            reply_markup=builder.as_markup()
-        )
-        return
-
-    if index >= len(tickets):
-        index = len(tickets) - 1
-        
-    callback.data = f"admin_tickets_view_{index}"
-    await view_open_tickets(callback, session, i18n, state)
+    await render_tickets_view(callback.message, tickets, index, i18n, edit=True)
 
 
 @router.callback_query(F.data.startswith("admin_ticket_reply_"), IsPrivate(), IsAdmin())
@@ -199,8 +212,8 @@ async def cancel_ticket_reply(
     
     index = int(callback.data.replace("cancel_ticket_reply_", ""))
     
-    callback.data = f"admin_tickets_view_{index}"
-    await view_open_tickets(callback, session, i18n, state)
+    tickets = await TicketRepository.get_all_open(session)
+    await render_tickets_view(callback.message, tickets, index, i18n, edit=True)
 
 
 @router.message(AdminTicketStates.waiting_for_reply, IsPrivate(), IsAdmin())
@@ -245,33 +258,6 @@ async def process_ticket_reply(
     except Exception as e:
         logger.warning(f"Failed to send reply to user {ticket.user_id} for ticket #{ticket_id}: {e}")
 
-    # Возвращаемся к оставшимся тикетам
+    # Возвращаемся к оставшимся тикетам с помощью render_tickets_view (в виде нового сообщения)
     tickets = await TicketRepository.get_all_open(session)
-    
-    if not tickets:
-        builder = InlineKeyboardBuilder()
-        builder.button(text=i18n.get("btn-admin-panel"), callback_data="admin_panel_entry")
-        await message.answer(
-            i18n.get("admin-tickets-empty"),
-            reply_markup=builder.as_markup()
-        )
-        return
-
-    if index >= len(tickets):
-        index = len(tickets) - 1
-
-    # Создаем фиктивный CallbackQuery, чтобы переиспользовать функцию просмотра
-    dummy_callback = CallbackQuery(
-        id="0",
-        from_user=message.from_user,
-        chat_instance="0",
-        message=message,  # Новое сообщение админа станет местом вывода
-        data=f"admin_tickets_view_{index}"
-    )
-    
-    # Подменяем метод edit_text на answer, чтобы dummy_callback отработал отправкой нового сообщения
-    async def mock_edit_text(text, reply_markup=None):
-        return await message.answer(text, reply_markup=reply_markup)
-        
-    dummy_callback.message.edit_text = mock_edit_text
-    await view_open_tickets(dummy_callback, session, i18n, state)
+    await render_tickets_view(message, tickets, index, i18n, edit=False)
