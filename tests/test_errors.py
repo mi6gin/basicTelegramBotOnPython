@@ -3,6 +3,7 @@ import time
 from unittest.mock import AsyncMock, MagicMock, patch
 from aiogram import Bot
 from aiogram.types import ErrorEvent, Update, Message, User
+from config.settings import settings
 from routers.errors.error_handler import global_error_handler, error_cache
 
 
@@ -39,9 +40,7 @@ async def test_global_error_handler_sends_alert():
     bot = AsyncMock(spec=Bot)
     bot.send_message = AsyncMock()
 
-    with patch("routers.errors.error_handler.settings") as mock_settings:
-        mock_settings.admin_ids = [77701, 77702]
-        
+    with patch.object(settings, "admin_ids", new=[77701, 77702]):
         await global_error_handler(event, bot)
         
         # Проверяем, что бот отправил сообщения обоим админам
@@ -80,9 +79,7 @@ async def test_global_error_handler_throttling():
     bot = AsyncMock(spec=Bot)
     bot.send_message = AsyncMock()
 
-    with patch("routers.errors.error_handler.settings") as mock_settings:
-        mock_settings.admin_ids = [77701]
-        
+    with patch.object(settings, "admin_ids", new=[77701]):
         # 1. Первый вызов — сообщение должно отправиться
         await global_error_handler(event, bot)
         assert bot.send_message.call_count == 1

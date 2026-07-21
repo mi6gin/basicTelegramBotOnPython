@@ -54,3 +54,43 @@ async def test_localization_rendering():
     welcome_en = core.get("welcome-text-start", "en", name="Anna")
     assert "Аня" in welcome_ru
     assert "Anna" in welcome_en
+
+
+@pytest.mark.asyncio
+async def test_all_code_keys_exist_in_locales():
+    """
+    Сканирует исходный код проекта на наличие вызовов i18n.get('key')
+    и проверяет, что каждый найденный ключ присутствует во всех локалях.
+    Предотвращает опечатки и синтаксические ошибки Fluent.
+    """
+    import os
+    import re
+    
+    key_pattern = re.compile(r'i18n\.get\(\s*["\']([^"\']+)["\']')
+    keys_in_code = set()
+    
+    # Обходим файлы проекта, исключая виртуальное окружение, тесты и миграции
+    for root, _, files in os.walk("."):
+        if any(ignored in root for ignored in (".venv", ".git", "tests", "alembic")):
+            continue
+        for file in files:
+            if file.endswith(".py"):
+                file_path = os.path.join(root, file)
+                with open(file_path, "r", encoding="utf-8") as f:
+                    content = f.read()
+                    for match in key_pattern.finditer(content):
+                        keys_in_code.add(match.group(1))
+                        
+    core = FluentRuntimeCore(path="locales")
+    await core.startup()
+    
+    for locale in ("ru", "en"):
+        translator = core.get_translator(locale)
+        translator_keys = set(translator._messages.keys())
+        
+        for key in keys_in_code:
+            assert key in translator_keys, (
+                f"Ключ '{key}', вызываемый в коде, отсутствует в файле локализации {locale}/messages.ftl! "
+                f"Возможно, допущена опечатка или в файле локализации есть синтаксическая ошибка."
+            )
+
