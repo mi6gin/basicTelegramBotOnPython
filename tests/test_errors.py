@@ -40,7 +40,7 @@ async def test_global_error_handler_sends_alert():
     bot.send_message = AsyncMock()
 
     with patch("routers.errors.error_handler.settings") as mock_settings:
-        mock_settings.ADMIN_IDS = [77701, 77702]
+        mock_settings.admin_ids = [77701, 77702]
         
         await global_error_handler(event, bot)
         
@@ -81,7 +81,7 @@ async def test_global_error_handler_throttling():
     bot.send_message = AsyncMock()
 
     with patch("routers.errors.error_handler.settings") as mock_settings:
-        mock_settings.ADMIN_IDS = [77701]
+        mock_settings.admin_ids = [77701]
         
         # 1. Первый вызов — сообщение должно отправиться
         await global_error_handler(event, bot)

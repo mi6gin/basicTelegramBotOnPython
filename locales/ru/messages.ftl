@@ -79,7 +79,7 @@ catalog-title =
     
     Выберите интересующий образ, чтобы узнать подробности:
 catalog-item-detail =
-    **{ $title }**
+    🌸 **{ $title }**
     
     📝 **Описание:** { $description }
     

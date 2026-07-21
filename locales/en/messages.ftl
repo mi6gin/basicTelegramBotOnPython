@@ -79,7 +79,7 @@ catalog-title =
     
     Select the style you want to view details for:
 catalog-item-detail =
-    **{ $title }**
+    🌸 **{ $title }**
     
     📝 **Description:** { $description }
     

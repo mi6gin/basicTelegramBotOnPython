@@ -72,7 +72,7 @@ async def global_error_handler(event: ErrorEvent, bot: Bot):
     )
 
     # 4. Рассылаем уведомление администраторам
-    for admin_id in settings.ADMIN_IDS:
+    for admin_id in settings.admin_ids:
         try:
             await bot.send_message(chat_id=admin_id, text=alert_text, parse_mode="HTML")
         except Exception as e:
