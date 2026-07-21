@@ -21,9 +21,18 @@ admin-tickets-title =
     
     💬 **Message:**
     <code>{ $message }</code>
-btn-ticket-close = ❌ Close Ticket
+btn-ticket-reply = ✉️ Reply and Close
+btn-ticket-close-no-reply = ❌ Close without Reply
 btn-ticket-prev = ⬅️ Prev
 btn-ticket-next = Next ➡️
+admin-ticket-reply-prompt = Enter your reply for ticket #{ $id } (it will be sent to the user and the ticket will be closed):
+admin-ticket-reply-cancel = Sending reply cancelled.
+user-ticket-closed-simple = 🔔 Your ticket #{ $id } has been closed by support.
+user-ticket-closed-with-reply =
+    🔔 **Your ticket #{ $id } has been closed by support.**
+    
+    💬 **Support reply:**
+    { $reply }
 
 # Errors and limitations
 err-banned-message =

@@ -21,9 +21,18 @@ admin-tickets-title =
     
     💬 **Сообщение:**
     <code>{ $message }</code>
-btn-ticket-close = ❌ Закрыть обращение
+btn-ticket-reply = ✉️ Ответить и закрыть
+btn-ticket-close-no-reply = ❌ Закрыть без ответа
 btn-ticket-prev = ⬅️ Пред.
 btn-ticket-next = След. ➡️
+admin-ticket-reply-prompt = Введите ваш ответ на обращение #{ $id } (он будет отправлен пользователю, а обращение закроется):
+admin-ticket-reply-cancel = Отправка ответа отменена.
+user-ticket-closed-simple = 🔔 Ваше обращение #{ $id } было закрыто поддержкой.
+user-ticket-closed-with-reply =
+    🔔 **Ваше обращение #{ $id } закрыто администратором.**
+    
+    💬 **Ответ поддержки:**
+    { $reply }
 
 # Ошибки и ограничения
 err-banned-message =

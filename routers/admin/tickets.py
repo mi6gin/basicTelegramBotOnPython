@@ -1,5 +1,5 @@
-from aiogram import Router, F
-from aiogram.types import CallbackQuery
+from aiogram import Router, F, Bot
+from aiogram.types import CallbackQuery, Message
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.fsm.context import FSMContext
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -7,8 +7,11 @@ from aiogram_i18n import I18nContext
 
 from database.repository.ticket_repo import TicketRepository
 from keyboards.inline.admin_panel import get_admin_panel_keyboard
+from keyboards.inline.cancel import get_cancel_inline_keyboard
 from filters.is_private import IsPrivate
 from filters.is_admin import IsAdmin
+from states.admin_tickets import AdminTicketStates
+from utils.logger import logger
 
 router = Router(name="admin_tickets")
 
@@ -67,11 +70,12 @@ async def view_open_tickets(
         message=ticket.message
     )
 
-    # Строим клавиатуру пагинации и управления
+    # Строим клавиатуру управления
     builder = InlineKeyboardBuilder()
     
-    # 1. Кнопка закрытия текущего тикета
-    builder.button(text=i18n.get("btn-ticket-close"), callback_data=f"admin_ticket_close_{ticket.id}_{index}")
+    # 1. Кнопки управления текущим тикетом
+    builder.button(text=i18n.get("btn-ticket-reply"), callback_data=f"admin_ticket_reply_{ticket.id}_{index}")
+    builder.button(text=i18n.get("btn-ticket-close-no-reply"), callback_data=f"admin_ticket_close_no_reply_{ticket.id}_{index}")
     
     # 2. Кнопки пагинации
     row_count = 0
@@ -89,7 +93,8 @@ async def view_open_tickets(
     # 3. Кнопка возврата в админку
     builder.button(text=i18n.get("btn-admin-panel"), callback_data="admin_panel_entry")
     
-    builder.adjust(1, row_count, 1)
+    # Разметка рядов: Ответить (1), Закрыть без ответа (1), Пагинация (row_count), Назад (1)
+    builder.adjust(1, 1, row_count, 1)
     
     await callback.message.edit_text(
         text=text,
@@ -97,31 +102,43 @@ async def view_open_tickets(
     )
 
 
-@router.callback_query(F.data.startswith("admin_ticket_close_"), IsPrivate(), IsAdmin())
-async def close_ticket_callback(
+@router.callback_query(F.data.startswith("admin_ticket_close_no_reply_"), IsPrivate(), IsAdmin())
+async def close_ticket_no_reply(
     callback: CallbackQuery, 
     session: AsyncSession, 
+    bot: Bot,
     i18n: I18nContext,
     state: FSMContext
 ):
     """
-    Закрывает тикет поддержки и обновляет просмотр.
+    Закрывает тикет без отправки текстового ответа.
+    Пользователь получает простое сервисное уведомление о закрытии.
     """
-    # callback_data: admin_ticket_close_{ticket_id}_{current_index}
+    # callback_data: admin_ticket_close_no_reply_{ticket_id}_{current_index}
     parts = callback.data.split("_")
-    ticket_id = int(parts[3])
-    index = int(parts[4])
+    ticket_id = int(parts[5])
+    index = int(parts[6])
     
+    # Загружаем тикет для отправки уведомления
+    ticket = await TicketRepository.get_by_id(session, ticket_id)
+    if not ticket:
+        await callback.answer(i18n.get("err-item-not-found"), show_alert=True)
+        return
+        
     # Закрываем тикет в БД
-    success = await TicketRepository.close(session, ticket_id)
-    if success:
-        await callback.answer(i18n.get("support-cancel"), show_alert=True)
-    else:
-        await callback.answer("Ошибка при закрытии", show_alert=True)
+    await TicketRepository.close(session, ticket_id)
+    await callback.answer(i18n.get("support-cancel"), show_alert=True)
 
-    # Загружаем оставшиеся открытые тикеты
+    # Уведомляем пользователя на его языке
+    locale = ticket.user.language if (ticket.user and ticket.user.language) else "ru"
+    try:
+        msg_text = i18n.get("user-ticket-closed-simple", locale=locale, id=str(ticket_id))
+        await bot.send_message(chat_id=ticket.user_id, text=msg_text)
+    except Exception as e:
+        logger.warning(f"Failed to notify user {ticket.user_id} about ticket #{ticket_id} closure: {e}")
+
+    # Перенаправляем на просмотр оставшихся
     tickets = await TicketRepository.get_all_open(session)
-    
     if not tickets:
         builder = InlineKeyboardBuilder()
         builder.button(text=i18n.get("btn-admin-panel"), callback_data="admin_panel_entry")
@@ -131,15 +148,133 @@ async def close_ticket_callback(
         )
         return
 
-    # Корректируем индекс для следующего просмотра
     if index >= len(tickets):
         index = len(tickets) - 1
         
-    # Перенаправляем на просмотр оставшихся
-    builder = InlineKeyboardBuilder()
-    builder.button(text="⏳ Обновление...", callback_data="noop")
-    await callback.message.edit_text("⏳ Обновление списка...", reply_markup=builder.as_markup())
-    
-    # Запускаем просмотр заново
     callback.data = f"admin_tickets_view_{index}"
     await view_open_tickets(callback, session, i18n, state)
+
+
+@router.callback_query(F.data.startswith("admin_ticket_reply_"), IsPrivate(), IsAdmin())
+async def start_ticket_reply(
+    callback: CallbackQuery, 
+    i18n: I18nContext,
+    state: FSMContext
+):
+    """
+    Инициирует процесс отправки ответа пользователю (FSM).
+    """
+    await callback.answer()
+    
+    # callback_data: admin_ticket_reply_{ticket_id}_{current_index}
+    parts = callback.data.split("_")
+    ticket_id = int(parts[3])
+    index = int(parts[4])
+    
+    prompt_msg = await callback.message.edit_text(
+        i18n.get("admin-ticket-reply-prompt", id=str(ticket_id)),
+        reply_markup=get_cancel_inline_keyboard(i18n, callback_data=f"cancel_ticket_reply_{index}")
+    )
+    
+    await state.set_state(AdminTicketStates.waiting_for_reply)
+    await state.update_data(
+        ticket_id=ticket_id,
+        index=index,
+        prompt_msg_id=prompt_msg.message_id
+    )
+
+
+@router.callback_query(F.data.startswith("cancel_ticket_reply_"), IsPrivate(), IsAdmin())
+async def cancel_ticket_reply(
+    callback: CallbackQuery, 
+    session: AsyncSession, 
+    i18n: I18nContext,
+    state: FSMContext
+):
+    """
+    Отмена ввода ответа. Возвращает к просмотру этого же тикета.
+    """
+    await state.clear()
+    await callback.answer(i18n.get("admin-ticket-reply-cancel"))
+    
+    index = int(callback.data.replace("cancel_ticket_reply_", ""))
+    
+    callback.data = f"admin_tickets_view_{index}"
+    await view_open_tickets(callback, session, i18n, state)
+
+
+@router.message(AdminTicketStates.waiting_for_reply, IsPrivate(), IsAdmin())
+async def process_ticket_reply(
+    message: Message, 
+    session: AsyncSession, 
+    bot: Bot, 
+    state: FSMContext, 
+    i18n: I18nContext
+):
+    """
+    Получает ответ администратора, отправляет его пользователю и закрывает обращение.
+    """
+    data = await state.get_data()
+    ticket_id = data.get("ticket_id")
+    index = data.get("index")
+    prompt_msg_id = data.get("prompt_msg_id")
+    
+    await state.clear()
+    
+    # Удаляем сообщение-подсказку с кнопкой отмены
+    if prompt_msg_id:
+        try:
+            await bot.delete_message(chat_id=message.chat.id, message_id=prompt_msg_id)
+        except Exception:
+            pass
+
+    ticket = await TicketRepository.get_by_id(session, ticket_id)
+    if not ticket:
+        await message.answer(i18n.get("err-item-not-found"))
+        return
+
+    # Закрываем тикет в БД
+    await TicketRepository.close(session, ticket_id)
+    await message.answer(i18n.get("support-cancel"))
+
+    # Отправляем ответ пользователю на его языке
+    locale = ticket.user.language if (ticket.user and ticket.user.language) else "ru"
+    try:
+        msg_text = i18n.get("user-ticket-closed-with-reply", locale=locale, id=str(ticket_id), reply=message.text)
+        await bot.send_message(chat_id=ticket.user_id, text=msg_text)
+    except Exception as e:
+        logger.warning(f"Failed to send reply to user {ticket.user_id} for ticket #{ticket_id}: {e}")
+
+    # Возвращаемся к оставшимся тикетам
+    tickets = await TicketRepository.get_all_open(session)
+    
+    # Создаем фиктивный CallbackQuery, чтобы переиспользовать функцию просмотра
+    dummy_callback = CallbackQuery(
+        id="0",
+        from_user=message.from_user,
+        chat_instance="0",
+        message=message,  # Новое сообщение админа станет местом вывода
+        data=f"admin_tickets_view_{index}"
+    )
+    
+    if not tickets:
+        builder = InlineKeyboardBuilder()
+        builder.button(text=i18n.get("btn-admin-panel"), callback_data="admin_panel_entry")
+        await message.answer(
+            i18n.get("admin-tickets-empty"),
+            reply_markup=builder.as_markup()
+        )
+        return
+
+    if index >= len(tickets):
+        index = len(tickets) - 1
+
+    # Запускаем просмотр заново (в виде нового сообщения, так как старое удалить/отредактировать нельзя)
+    dummy_callback.data = f"admin_tickets_view_{index}"
+    
+    # Подменяем метод edit_text на answer, чтобы dummy_callback отработал отправкой нового сообщения
+    async def mock_edit_text(text, reply_markup=None):
+        return await message.answer(text, reply_markup=reply_markup)
+        
+    dummy_callback.message.edit_text = mock_edit_text
+    await view_open_tickets(dummy_callback, session, i18n, state)
