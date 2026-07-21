@@ -14,12 +14,12 @@ btn-admin-logs = 📋 Get Logs
 btn-admin-tickets = 📬 Tickets ({ $count })
 admin-tickets-empty = 📭 All user tickets are closed or empty.
 admin-tickets-title =
-    📬 **Ticket #{ $id }** [{ $status }]
+    📬 <b>Ticket #{ $id }</b> [{ $status }]
     
-    👤 **Sender:** { $name } (ID: <code>{ $user_id }</code>, @{ $username })
-    📅 **Created At:** { $date }
+    👤 <b>Sender:</b> { $name } (ID: <code>{ $user_id }</code>, @{ $username })
+    📅 <b>Created At:</b> { $date }
     
-    💬 **Message:**
+    💬 <b>Message:</b>
     <code>{ $message }</code>
 btn-ticket-reply = ✉️ Reply and Close
 btn-ticket-close-no-reply = ❌ Close without Reply
@@ -29,9 +29,9 @@ admin-ticket-reply-prompt = Enter your reply for ticket #{ $id } (it will be sen
 admin-ticket-reply-cancel = Sending reply cancelled.
 user-ticket-closed-simple = 🔔 Your ticket #{ $id } has been closed by support.
 user-ticket-closed-with-reply =
-    🔔 **Your ticket #{ $id } has been closed by support.**
+    🔔 <b>Your ticket #{ $id } has been closed by support.</b>
     
-    💬 **Support reply:**
+    💬 <b>Support reply:</b>
     { $reply }
 
 # Errors and limitations
@@ -64,7 +64,7 @@ help-text =
 help-text-admin =
     | /admin - Enter the administrator panel
 about-text =
-    ✨ **Nihao-chan Bot** is a high-quality Telegram bot boilerplate,
+    ✨ <b>Nihao-chan Bot</b> is a high-quality Telegram bot boilerplate,
     built on the Aiogram 3.x framework and SQLAlchemy 2.0 Async database.
     
     The boilerplate supports role model (user/admin), FSM states, anti-flood protection, and SQLite/PostgreSQL database.
@@ -74,94 +74,94 @@ menu-title =
 
 # Profile
 profile-title =
-    👤 **Nihao-chan Profile**
+    👤 <b>Nihao-chan Profile</b>
     
-    ┣ **Name:** { $name }
-    ┣ **Username:** { $username }
-    ┣ **Telegram ID:** `{ $id }`
-    ┣ **Role:** `{ $role }`
-    ┣ **Active Style:** { $theme }
-    ┗ **Registration Date:** { $date }
+    ┣ <b>Name:</b> { $name }
+    ┣ <b>Username:</b> { $username }
+    ┣ <b>Telegram ID:</b> <code>{ $id }</code>
+    ┣ <b>Role:</b> <code>{ $role }</code>
+    ┣ <b>Active Style:</b> { $theme }
+    ┗ <b>Registration Date:</b> { $date }
 profile-username-empty = not set
 
 # Support (Tickets)
 support-prompt =
-    ✍️ **Contacting Nihao-chan**
+    ✍️ <b>Contacting Nihao-chan</b>
     
     Describe your issue or ask your question in one message.
     We will try to reply as soon as possible!
 support-cancel = Sending ticket cancelled.
 support-success =
-    ✅ **Ticket #{ $id } sent successfully!**
+    ✅ <b>Ticket #{ $id } sent successfully!</b>
     
     Nihao-chan received your message. We will contact you soon!
 
 # Catalog
 catalog-title =
-    📂 **Nihao-chan Styles Catalog**
+    📂 <b>Nihao-chan Styles Catalog</b>
     
     Select the style you want to view details for:
 catalog-item-detail =
-    🌸 **{ $title }**
+    🌸 <b>{ $title }</b>
     
-    📝 **Description:** { $description }
+    📝 <b>Description:</b> { $description }
     
-    📊 **Rating:** { $rating }
+    📊 <b>Rating:</b> { $rating }
 
 btn-catalog-select = 🌟 Apply Style
 catalog-theme-applied = Style "{ $theme }" has been successfully applied!
 
 # Admin Panel
 admin-panel-title =
-    ⚙️ **Nihao-chan Control Panel**
+    ⚙️ <b>Nihao-chan Control Panel</b>
     
     Logged in with admin rights. Select an action:
 admin-stats-title =
-    📊 **Nihao-chan Bot Statistics**
+    📊 <b>Nihao-chan Bot Statistics</b>
     
-    ┣ Total users in DB: `{ $total }`
-    ┣ Banned users: `{ $banned }`
-    ┗ Open support tickets: `{ $tickets }`
+    ┣ Total users in DB: <code>{ $total }</code>
+    ┣ Banned users: <code>{ $banned }</code>
+    ┗ Open support tickets: <code>{ $tickets }</code>
 admin-mailing-target-prompt =
-    📢 **Broadcast Audience Setup**
+    📢 <b>Broadcast Audience Setup</b>
     
     Select who you want to send the message to:
 btn-mailing-target-all = 👥 All Users
 btn-mailing-target-filters = 🎨 By Filters (Lang/Style)
 btn-mailing-target-list = 🎯 Select from List
 admin-mailing-filters-prompt =
-    🎨 **Select Broadcast Filter**
+    🎨 <b>Select Broadcast Filter</b>
     
     Select targeting criteria:
 btn-mailing-filter-lang-ru = 🇷🇺 Only RU-locale Users
 btn-mailing-filter-lang-en = 🇬🇧 Only EN-locale Users
 btn-mailing-filter-theme = 🎨 By Styles/Themes
 admin-mailing-themes-prompt =
-    🎨 **Select Style for targeting**
+    🎨 <b>Select Style for targeting</b>
     
     Select the Nihao-chan style users of which should receive this broadcast:
 admin-mailing-list-prompt =
-    🎯 **Selective Broadcast from List**
+    🎯 <b>Selective Broadcast from List</b>
     
     Select recipients (selected: { $count }):
 btn-mailing-list-send = ✉️ Send Message ({ $count })
 admin-mailing-prompt =
-    📣 **Send Broadcast Content**
+    📣 <b>Send Broadcast Content</b>
     
     Send the message (text, photo, video, or sticker) you want to broadcast to the selected group ({ $target }):
 admin-mailing-cancel = Broadcast cancelled.
 admin-mailing-sending = ⏳ Broadcast started, please wait...
 admin-mailing-success =
-    📊 **Broadcast finished!**
+    📊 <b>Broadcast finished!</b>
     
-    ┣ Successfully sent: `{ $success }`
-    ┗ Sending errors (bot blocked): `{ $failed }`
+    ┣ Successfully sent: <code>{ $success }</code>
+    ┗ Sending errors (bot blocked): <code>{ $failed }</code>
 admin-users-prompt =
-    👥 **User Access Management**
+    👥 <b>User Access Management</b>
     
     Send the Telegram ID of the user you want to ban or unban:
 admin-users-cancel = Action cancelled.
-admin-users-status-changed = User { $name } (`{ $id }`) is now **{ $status }**.
+admin-users-status-changed = User { $name } (<code>{ $id }</code>) is now <b>{ $status }</b>.
 admin-users-banned = banned ❌
 admin-users-unbanned = unbanned  active
 admin-logs-caption = 📄 Current bot log file
