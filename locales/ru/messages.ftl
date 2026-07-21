@@ -7,10 +7,23 @@ btn-cancel = ❌ Отмена
 btn-back-to-menu = 🔙 Главное меню
 btn-back-to-catalog = 🔙 Назад в каталог
 btn-admin-stats = 📊 Статистика
-btn-admin-mailing = 📣 Создать рассылку
-btn-admin-users = 👥 Управление
+btn-admin-mailing = 📢 Рассылка
+btn-admin-users = 👤 Бан/Разбан
+btn-admin-logs = 📄 Получить логи
+btn-admin-tickets = 📬 Обращения ({ $count })
 btn-admin-panel = 🔙 Панель управления
-btn-admin-logs = 📋 Получить логи
+admin-tickets-empty = 📭 Все обращения пользователей закрыты или отсутствуют.
+admin-tickets-title =
+    📬 **Обращение #{ $id }** [{ $status }]
+    
+    👤 **Отправитель:** { $name } (ID: <code>{ $user_id }</code>, @{ $username })
+    📅 **Дата создания:** { $date }
+    
+    💬 **Сообщение:**
+    <code>{ $message }</code>
+btn-ticket-close = ❌ Закрыть обращение
+btn-ticket-prev = ⬅️ Пред.
+btn-ticket-next = След. ➡️
 
 # Ошибки и ограничения
 err-banned-message =
@@ -58,6 +71,7 @@ profile-title =
     ┣ **Юзернейм:** { $username }
     ┣ **Telegram ID:** `{ $id }`
     ┣ **Роль:** `{ $role }`
+    ┣ **Активный стиль:** { $theme }
     ┗ **Дата регистрации:** { $date }
 profile-username-empty = не установлен
 
@@ -84,6 +98,9 @@ catalog-item-detail =
     📝 **Описание:** { $description }
     
     📊 **Популярность:** { $rating }
+
+btn-catalog-select = 🌟 Применить стиль
+catalog-theme-applied = Стиль "{ $theme }" успешно применен!
 
 # Админ-панель
 admin-panel-title =

@@ -29,6 +29,9 @@ class User(Base):
     # Язык интерфейса пользователя ('ru' или 'en')
     language: Mapped[str] = mapped_column(String(10), default="ru")
     
+    # Активный стиль интерфейса
+    selected_theme: Mapped[str] = mapped_column(String(64), server_default="theme_classic", default="theme_classic")
+    
     # Флаг блокировки пользователя
     is_banned: Mapped[bool] = mapped_column(Boolean, default=False)
     

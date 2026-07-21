@@ -4,6 +4,7 @@ from .panel import router as panel_router
 from .users import router as users_router
 from .mailing import router as mailing_router
 from .stats import router as stats_router
+from .tickets import router as tickets_router
 
 # Объединяющий роутер для административной зоны
 router = Router(name="admin_main")
@@ -16,5 +17,6 @@ router.include_routers(
     panel_router,
     users_router,
     mailing_router,
-    stats_router
+    stats_router,
+    tickets_router
 )

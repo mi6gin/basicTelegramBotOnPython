@@ -17,12 +17,21 @@ def format_profile_text(user: User, i18n: I18nContext) -> str:
     username_str = f"@{user.username}" if user.username else i18n.get("profile-username-empty")
     reg_date = user.registered_at.strftime("%d.%m.%Y в %H:%M")
     
+    theme_map = {
+        "theme_classic": "catalog-classic-title",
+        "theme_sakura": "catalog-sakura-title",
+        "theme_cyberpunk": "catalog-cyberpunk-title"
+    }
+    theme_key = theme_map.get(user.selected_theme, "catalog-classic-title")
+    theme_name = i18n.get(theme_key)
+    
     return i18n.get(
         "profile-title",
         name=user.first_name,
         username=username_str,
         id=str(user.telegram_id),
         role=user.role,
+        theme=theme_name,
         date=reg_date
     )
 

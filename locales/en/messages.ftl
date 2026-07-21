@@ -11,6 +11,19 @@ btn-admin-mailing = 📣 Create Broadcast
 btn-admin-users = 👥 User Management
 btn-admin-panel = 🔙 Control Panel
 btn-admin-logs = 📋 Get Logs
+btn-admin-tickets = 📬 Tickets ({ $count })
+admin-tickets-empty = 📭 All user tickets are closed or empty.
+admin-tickets-title =
+    📬 **Ticket #{ $id }** [{ $status }]
+    
+    👤 **Sender:** { $name } (ID: <code>{ $user_id }</code>, @{ $username })
+    📅 **Created At:** { $date }
+    
+    💬 **Message:**
+    <code>{ $message }</code>
+btn-ticket-close = ❌ Close Ticket
+btn-ticket-prev = ⬅️ Prev
+btn-ticket-next = Next ➡️
 
 # Errors and limitations
 err-banned-message =
@@ -58,6 +71,7 @@ profile-title =
     ┣ **Username:** { $username }
     ┣ **Telegram ID:** `{ $id }`
     ┣ **Role:** `{ $role }`
+    ┣ **Active Style:** { $theme }
     ┗ **Registration Date:** { $date }
 profile-username-empty = not set
 
@@ -84,6 +98,9 @@ catalog-item-detail =
     📝 **Description:** { $description }
     
     📊 **Rating:** { $rating }
+
+btn-catalog-select = 🌟 Apply Style
+catalog-theme-applied = Style "{ $theme }" has been successfully applied!
 
 # Admin Panel
 admin-panel-title =

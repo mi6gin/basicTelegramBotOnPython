@@ -4,6 +4,8 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.fsm.context import FSMContext
 from aiogram_i18n import I18nContext
 from filters.is_private import IsPrivate
+from sqlalchemy.ext.asyncio import AsyncSession
+from database.models.user import User
 
 router = Router(name="user_catalog")
 
@@ -53,6 +55,7 @@ async def show_catalog(callback: CallbackQuery, i18n: I18nContext, state: FSMCon
 async def show_catalog_item(callback: CallbackQuery, i18n: I18nContext):
     """
     Показывает карточку конкретного товара/темы с детальным описанием.
+    Включает кнопку для активации темы.
     """
     await callback.answer()
     
@@ -64,6 +67,7 @@ async def show_catalog_item(callback: CallbackQuery, i18n: I18nContext):
         return
         
     builder = InlineKeyboardBuilder()
+    builder.button(text=i18n.get("btn-catalog-select"), callback_data=f"catalog_select_{item_id}")
     builder.button(text=i18n.get("btn-back-to-catalog"), callback_data="user_catalog")
     builder.adjust(1)
     
@@ -82,3 +86,27 @@ async def show_catalog_item(callback: CallbackQuery, i18n: I18nContext):
         text=text,
         reply_markup=builder.as_markup()
     )
+
+
+@router.callback_query(F.data.startswith("catalog_select_"), IsPrivate())
+async def select_catalog_item(
+    callback: CallbackQuery, 
+    session: AsyncSession, 
+    db_user: User, 
+    i18n: I18nContext
+):
+    """
+    Активирует выбранный образ для пользователя в базе данных.
+    """
+    item_id = callback.data.replace("catalog_select_", "")
+    item_data = CATALOG_ITEMS.get(item_id)
+    
+    if not item_data:
+        await callback.answer(i18n.get("err-item-not-found"), show_alert=True)
+        return
+        
+    from database.repository.user_repo import UserRepository
+    await UserRepository.set_selected_theme(session, db_user.telegram_id, item_id)
+    
+    title = i18n.get(item_data["title_key"])
+    await callback.answer(i18n.get("catalog-theme-applied", theme=title), show_alert=True)

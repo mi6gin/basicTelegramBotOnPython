@@ -171,6 +171,7 @@ nihao-chan-bot/
     ├── test_localization.py    # Проверка симметрии и рендера локализации.
     ├── test_middlewares.py     # Тесты троттлинга, банов и логирования.
     ├── test_repositories.py    # Интеграционные тесты СУБД.
+    ├── test_tickets_admin.py   # Тесты панели обращений и выбора темы в каталоге.
     └── test_validators.py      # Тесты простых валидаторов.
 ```
 

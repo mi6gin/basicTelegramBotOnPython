@@ -81,6 +81,18 @@ class UserRepository:
         return None
 
     @staticmethod
+    async def set_selected_theme(session: AsyncSession, telegram_id: int, theme_id: str) -> Optional[User]:
+        """
+        Обновляет выбранную тему пользователя.
+        """
+        user = await UserRepository.get_by_id(session, telegram_id)
+        if user:
+            user.selected_theme = theme_id
+            await session.commit()
+            return user
+        return None
+
+    @staticmethod
     async def set_ban_status(session: AsyncSession, telegram_id: int, is_banned: bool) -> bool:
         """
         Устанавливает статус бана пользователя (True - забанить, False - разбанить).
