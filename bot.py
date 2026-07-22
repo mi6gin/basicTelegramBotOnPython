@@ -59,7 +59,10 @@ async def main():
         token=settings.bot_token.get_secret_value(),
         default=DefaultBotProperties(parse_mode=ParseMode.HTML)
     )
-    dp = Dispatcher()
+    
+    from database.fsm_storage import SQLAlchemyStorage
+    storage = SQLAlchemyStorage(AsyncSessionLocal)
+    dp = Dispatcher(storage=storage)
 
     # 3. Регистрация Middleware (прослоек).
     # Порядок регистрации критически важен:

@@ -47,6 +47,7 @@ async def init_db():
             # Импортируем модели перед созданием таблиц, чтобы они зарегистрировались в Base.metadata
             from database.models.user import User
             from database.models.ticket import Ticket
+            from database.models.fsm_state import FSMStateModel
             
             await conn.run_sync(Base.metadata.create_all)
         logger.info("База данных успешно инициализирована.")

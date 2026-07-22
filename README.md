@@ -168,6 +168,7 @@ nihao-chan-bot/
     ├── test_errors.py          # Тесты хендлера ошибок и троттлинга.
     ├── test_filters.py         # Тесты фильтров IsAdmin/IsPrivate.
     ├── test_fsm_cancel.py      # Тесты отмены FSM-состояний.
+    ├── test_fsm_storage.py     # Тесты сохранения FSM-состояний в БД.
     ├── test_localization.py    # Проверка симметрии и рендера локализации.
     ├── test_mailing_targeted.py # Тесты таргетированной и выборочной рассылки.
     ├── test_middlewares.py     # Тесты троттлинга, банов и логирования.

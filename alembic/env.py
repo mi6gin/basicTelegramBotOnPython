@@ -17,6 +17,7 @@ from database.engine import Base
 # Обязательно импортируем все модели для регистрации их метаданных в Base.metadata
 from database.models.user import User
 from database.models.ticket import Ticket
+from database.models.fsm_state import FSMStateModel
 
 # Получаем объект конфигурации Alembic
 config = context.config
