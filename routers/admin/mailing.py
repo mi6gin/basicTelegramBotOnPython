@@ -1,5 +1,6 @@
 import asyncio
 import math
+import time
 from aiogram import Router, F, Bot
 from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
@@ -29,6 +30,43 @@ class AdminMailingStates(StatesGroup):
     waiting_for_content = State()
 
 
+# Глобальный RAM-кэш пользователей для исключения лишних запросов к СУБД
+# { "timestamp": float, "users": List[Dict] }
+USERS_CACHE = {"timestamp": 0.0, "users": []}
+CACHE_TTL = 60.0  # Время жизни кэша (в секундах)
+
+
+async def get_cached_users(session: AsyncSession) -> list:
+    """
+    Возвращает облегченный список пользователей из кэша в оперативной памяти.
+    Если кэш пуст или устарел, делает ровно один точечный запрос к БД.
+    """
+    now = time.time()
+    if USERS_CACHE["users"] and (now - USERS_CACHE["timestamp"] < CACHE_TTL):
+        return USERS_CACHE["users"]
+        
+    # Запрашиваем только необходимые поля, минуя тяжелые ORM-объекты
+    query = (
+        select(User.telegram_id, User.first_name, User.username)
+        .where(User.telegram_id > 0)
+        .order_by(User.registered_at.desc())
+    )
+    result = await session.execute(query)
+    rows = result.all()
+    
+    users = []
+    for row in rows:
+        users.append({
+            "telegram_id": row[0],
+            "first_name": row[1],
+            "username": row[2]
+        })
+        
+    USERS_CACHE["users"] = users
+    USERS_CACHE["timestamp"] = now
+    return users
+
+
 @router.callback_query(F.data == "admin_mailing", IsPrivate(), IsAdmin())
 async def start_mailing_panel(callback: CallbackQuery, state: FSMContext, i18n: I18nContext):
     """
@@ -36,6 +74,10 @@ async def start_mailing_panel(callback: CallbackQuery, state: FSMContext, i18n: 
     """
     await callback.answer()
     await state.clear()
+    
+    # Сбрасываем кэш при входе, чтобы список пользователей обновился
+    USERS_CACHE["users"] = []
+    USERS_CACHE["timestamp"] = 0.0
     
     builder = InlineKeyboardBuilder()
     builder.button(text=i18n.get("btn-mailing-target-all"), callback_data="mailing_target_all")
@@ -139,10 +181,12 @@ async def view_target_list(
     session: AsyncSession, 
     state: FSMContext, 
     i18n: I18nContext,
-    page: int = None
+    page: int = None,
+    selected_ids: list = None
 ):
     """
     Интерактивный чек-лист пользователей с постраничной навигацией (пагинация).
+    Использует кэш в оперативной памяти для исключения повторных запросов к СУБД.
     """
     await callback.answer()
     
@@ -153,14 +197,13 @@ async def view_target_list(
         except ValueError:
             page = 0
             
-    # Получаем выбранные ID из стейта
-    state_data = await state.get_data()
-    selected_ids = state_data.get("selected_ids", [])
+    # Получаем выбранные ID из стейта, если не переданы
+    if selected_ids is None:
+        state_data = await state.get_data()
+        selected_ids = state_data.get("selected_ids", [])
     
-    # Извлекаем только реальных пользователей (ID > 0)
-    query = select(User).where(User.telegram_id > 0).order_by(User.registered_at.desc())
-    result = await session.execute(query)
-    users = list(result.scalars().all())
+    # Загружаем пользователей из кэша
+    users = await get_cached_users(session)
     
     if not users:
         builder = InlineKeyboardBuilder()
@@ -182,11 +225,12 @@ async def view_target_list(
     
     # 1. Выводим список пользователей
     for u in page_users:
-        is_selected = u.telegram_id in selected_ids
+        tg_id = u["telegram_id"]
+        is_selected = tg_id in selected_ids
         prefix = "✅ " if is_selected else "⬜️ "
-        username_str = f" @{u.username}" if u.username else ""
-        btn_text = f"{prefix}{u.first_name}{username_str}"
-        builder.button(text=btn_text, callback_data=f"mailing_list_toggle_{u.telegram_id}_{page}")
+        username_str = f" @{u['username']}" if u["username"] else ""
+        btn_text = f"{prefix}{u['first_name']}{username_str}"
+        builder.button(text=btn_text, callback_data=f"mailing_list_toggle_{tg_id}_{page}")
         
     # 2. Ряд кнопок пагинации страницы
     pagination_row = 0
@@ -246,8 +290,8 @@ async def toggle_list_user(
         
     await state.update_data(selected_ids=selected_ids)
     
-    # Сразу обновляем экран списка
-    await view_target_list(callback, session, state, i18n, page)
+    # Сразу обновляем экран списка без повторного запроса стейта
+    await view_target_list(callback, session, state, i18n, page, selected_ids=selected_ids)
 
 
 @router.callback_query(F.data == "mailing_list_confirm", IsPrivate(), IsAdmin())
@@ -290,6 +334,11 @@ async def process_cancel_mailing(callback: CallbackQuery, state: FSMContext, i18
     """
     await callback.answer()
     await state.clear()
+    
+    # Сбрасываем кэш
+    USERS_CACHE["users"] = []
+    USERS_CACHE["timestamp"] = 0.0
+    
     await start_mailing_panel(callback, state, i18n)
 
 
@@ -310,6 +359,10 @@ async def process_mailing_content(
     prompt_msg_id = data.get("prompt_msg_id")
     
     await state.clear()
+
+    # Сбрасываем кэш
+    USERS_CACHE["users"] = []
+    USERS_CACHE["timestamp"] = 0.0
 
     # Удаляем сообщение-подсказку с инлайн-кнопкой отмены
     if prompt_msg_id:

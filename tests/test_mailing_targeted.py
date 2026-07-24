@@ -92,21 +92,19 @@ async def test_view_target_list():
     callback.answer = AsyncMock()
     callback.message = MagicMock()
     callback.message.edit_text = AsyncMock()
-    
+    from routers.admin.mailing import USERS_CACHE
+    USERS_CACHE["users"] = []
+    USERS_CACHE["timestamp"] = 0.0
+
     session = MagicMock(spec=AsyncSession)
     state = AsyncMock(spec=FSMContext)
     state.get_data = AsyncMock(return_value={"selected_ids": [123]})
     i18n = MagicMock(spec=I18nContext)
     i18n.get = MagicMock(return_value="Select recipients")
     
-    mock_user = MagicMock(spec=User)
-    mock_user.telegram_id = 123
-    mock_user.first_name = "Bob"
-    mock_user.username = "bob_test"
-    
     mock_result = MagicMock()
     mock_result.scalars = MagicMock(return_value=mock_result)
-    mock_result.all = MagicMock(return_value=[mock_user])
+    mock_result.all = MagicMock(return_value=[(123, "Bob", "bob_test")])
     session.execute = AsyncMock(return_value=mock_result)
 
     await view_target_list(callback, session, state, i18n, page=0)
@@ -123,20 +121,19 @@ async def test_toggle_list_user():
     callback.message = MagicMock()
     callback.message.edit_text = AsyncMock()
     
+    from routers.admin.mailing import USERS_CACHE
+    USERS_CACHE["users"] = []
+    USERS_CACHE["timestamp"] = 0.0
+
     session = MagicMock(spec=AsyncSession)
     state = AsyncMock(spec=FSMContext)
     state.get_data = AsyncMock(return_value={"selected_ids": []})
     i18n = MagicMock(spec=I18nContext)
     i18n.get = MagicMock(return_value="Select recipients")
     
-    mock_user = MagicMock(spec=User)
-    mock_user.telegram_id = 123
-    mock_user.first_name = "Bob"
-    mock_user.username = "bob_test"
-    
     mock_result = MagicMock()
     mock_result.scalars = MagicMock(return_value=mock_result)
-    mock_result.all = MagicMock(return_value=[mock_user])
+    mock_result.all = MagicMock(return_value=[(123, "Bob", "bob_test")])
     session.execute = AsyncMock(return_value=mock_result)
 
     await toggle_list_user(callback, session, state, i18n)
